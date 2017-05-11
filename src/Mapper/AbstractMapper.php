@@ -1,4 +1,5 @@
 <?php
+
 /*
  *
  * Author of this code is Geoffroy Aubry => https://github.com/geoffroy-aubry
@@ -15,13 +16,16 @@ use Aura\Sql\ExtendedPdo;
  */
 abstract class AbstractMapper
 {
+
     use TransactionTrait;
+
+    const WHERE_SEPARATOR_AND = ' AND ';
+    const WHERE_SEPARATOR_OR  = ' OR ';
 
     /**
      * @var ExtendedPdoInterface
      */
     protected $oPdo;
-
     private $aMap;
 
     /**
@@ -96,7 +100,17 @@ abstract class AbstractMapper
 
     public function buildSelectQuery($sEntityName, array $aWhere, $sOrderBy = '', $iLimit = 0, $iOffset = 0)
     {
-        $sQueryWhere = $this->buildWherePlaceholders(array_keys($aWhere), ' AND ');
+        return $this->buildSelect($sEntityName, $aWhere, self::WHERE_SEPARATOR_AND, $sOrderBy, $iLimit, $iOffset);
+    }
+
+    public function buildSelectQueryOr($sEntityName, array $aWhere, $sOrderBy = '', $iLimit = 0, $iOffset = 0)
+    {
+        return $this->buildSelect($sEntityName, $aWhere, self::WHERE_SEPARATOR_OR, $sOrderBy, $iLimit, $iOffset);
+    }
+
+    private function buildSelect($sEntityName, array $aWhere, $sSeparator = self::WHERE_SEPARATOR_AND, $sOrderBy = '', $iLimit = 0, $iOffset = 0)
+    {
+        $sQueryWhere = $this->buildWherePlaceholders(array_keys($aWhere), $sSeparator);
         if ($iLimit > 0) {
             $sQueryLimit = ' LIMIT ' . $iOffset . ',' . $iLimit;
         } elseif ($iOffset > 0) {
@@ -105,10 +119,10 @@ abstract class AbstractMapper
         } else {
             $sQueryLimit = '';
         }
-        $sQuery      = "SELECT * FROM `$sEntityName`"
-            . (! empty($sQueryWhere) ? ' WHERE ' . $sQueryWhere : '')
-            . (! empty($sOrderBy) ? ' ORDER BY ' . $sOrderBy : '')
-            . $sQueryLimit;
+        $sQuery = "SELECT * FROM `$sEntityName`"
+                . (!empty($sQueryWhere) ? ' WHERE ' . $sQueryWhere : '')
+                . (!empty($sOrderBy) ? ' ORDER BY ' . $sOrderBy : '')
+                . $sQueryLimit;
         return [$sQuery, $aWhere];
     }
 
@@ -152,8 +166,22 @@ abstract class AbstractMapper
 
     public function fetchAll(array $aWhere, $sOrderBy = '', $iLimit = 0, $iOffset = 0)
     {
+        return $this->fetch($aWhere, self::WHERE_SEPARATOR_AND, $sOrderBy, $iLimit, $iOffset);
+    }
+
+    public function fetchAllOr(array $aWhere, $sOrderBy = '', $iLimit = 0, $iOffset = 0)
+    {
+        return $this->fetch($aWhere, self::WHERE_SEPARATOR_OR, $sOrderBy, $iLimit, $iOffset);
+    }
+
+    private function fetch(array $aWhere, $sSeparator = self::WHERE_SEPARATOR_AND, $sOrderBy = '', $iLimit = 0, $iOffset = 0)
+    {
         $this->formatToDb($aWhere);
-        list($sQuery, $aParameters) = $this->buildSelectQuery($this->get('entity'), $aWhere, $sOrderBy, $iLimit, $iOffset);
+        if ($sSeparator === self::WHERE_SEPARATOR_OR) {
+            list($sQuery, $aParameters) = $this->buildSelectQuery($this->get('entity'), $aWhere, $sOrderBy, $iLimit, $iOffset);
+        } else {
+            list($sQuery, $aParameters) = $this->buildSelectQueryOr($this->get('entity'), $aWhere, $sOrderBy, $iLimit, $iOffset);
+        }
         return $this->fetchAllQuery($sQuery, $aParameters);
     }
 
@@ -163,15 +191,21 @@ abstract class AbstractMapper
         return isset($aAllRecords[0]) ? $aAllRecords[0] : [];
     }
 
+    public function fetchOneOr(array $aWhere, $sOrderBy = '')
+    {
+        $aAllRecords = $this->fetchAllOr($aWhere, $sOrderBy, 1);
+        return isset($aAllRecords[0]) ? $aAllRecords[0] : [];
+    }
+
     public function fetchAllQuery($sQuery, array $aParameters = [])
     {
         try {
             $aAllRecords = $this->oPdo->fetchAll($sQuery, $aParameters) ?: [];
         } catch (\PDOException $oException) {
             $sErrMsg = $oException->getMessage()
-                . "\n  Entity: " . $this->get('entity')
-                . "\n  Query: $sQuery"
-                . "\n  Parameters: " . print_r($aParameters, true);
+                    . "\n  Entity: " . $this->get('entity')
+                    . "\n  Query: $sQuery"
+                    . "\n  Parameters: " . print_r($aParameters, true);
             throw new \RuntimeException($sErrMsg);
         }
 
@@ -197,9 +231,9 @@ abstract class AbstractMapper
             $oPdoStmt = $this->oPdo->perform($sQuery, $aParameters) ?: [];
         } catch (\PDOException $oException) {
             $sErrMsg = $oException->getMessage()
-                . "\n  Entity: " . $this->get('entity')
-                . "\n  Query: $sQuery"
-                . "\n  Parameters: " . print_r($aParameters, true);
+                    . "\n  Entity: " . $this->get('entity')
+                    . "\n  Query: $sQuery"
+                    . "\n  Parameters: " . print_r($aParameters, true);
             throw new \RuntimeException($sErrMsg);
         }
         return $oPdoStmt;
@@ -214,9 +248,9 @@ abstract class AbstractMapper
             $this->oPdo->perform($sQuery, $aParameters);
         } catch (\PDOException $oException) {
             $sErrMsg = $oException->getMessage() . "\n  Entity: "
-                . $this->get('entity')
-                . "\n  Query: $sQuery"
-                . "\n  Parameters: " . print_r($aParameters, true);
+                    . $this->get('entity')
+                    . "\n  Query: $sQuery"
+                    . "\n  Parameters: " . print_r($aParameters, true);
             throw new \RuntimeException($sErrMsg);
         }
 
@@ -233,9 +267,9 @@ abstract class AbstractMapper
             $oPdoStmt = $this->oPdo->perform($sQuery, $aParameters);
         } catch (\PDOException $oException) {
             $sErrMsg = $oException->getMessage()
-                . "\n  Entity: " . $this->get('entity')
-                . "\n  Query: $sQuery"
-                . "\n  Parameters: " . print_r($aParameters, true);
+                    . "\n  Entity: " . $this->get('entity')
+                    . "\n  Query: $sQuery"
+                    . "\n  Parameters: " . print_r($aParameters, true);
             throw new \RuntimeException($sErrMsg);
         }
 
@@ -258,4 +292,5 @@ abstract class AbstractMapper
         $oPdo = $this->oPdo;
         $oPdo->disconnect();
     }
+
 }
