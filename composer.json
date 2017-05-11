@@ -1,5 +1,5 @@
 {
-  "name": "asticode/php-data-mapper",
+  "name": "molotov/php-data-mapper",
   "type": "library",
   "description": "Mapper and Repository factories that implements the Data Mapper structure",
   "keywords": [
@@ -24,7 +24,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Asticode\\DataMapper\\": "src/"
+      "Molotov\\DataMapper\\": "src/"
     }
   }
 }
