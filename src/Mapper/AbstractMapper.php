@@ -25,7 +25,22 @@ abstract class AbstractMapper
     /**
      * @var ExtendedPdoInterface
      */
-    protected $oPdo;
+    private $oPdoSlave;
+
+    /**
+     * @var ExtendedPdoInterface
+     */
+    private $oPdoMaster;
+
+    /**
+     * @var ExtendedPdoInterface
+     */
+    private $oPdoForcedUse;
+
+    /**
+     *
+     * @var array
+     */
     private $aMap;
 
     /**
@@ -42,16 +57,79 @@ abstract class AbstractMapper
     private $iJsonEncodeOptions;
 
     /**
-     * @param ExtendedPdoInterface $oPdo
+     * @param ExtendedPdoInterface $oPdoMaster
      */
-    public function __construct(ExtendedPdoInterface $oPdo)
+    public function __construct(ExtendedPdoInterface $oPdoMaster, ExtendedPdoInterface $oPdoSlave)
     {
-        $this->oPdo               = $oPdo;
+        $this->oPdoSlave          = $oPdoSlave;
+        $this->oPdoMaster         = $oPdoMaster;
         $this->iJsonEncodeOptions = JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK | JSON_UNESCAPED_SLASHES;
         $this->aJsonColumns       = [];
         $this->aBinaryColumns     = [];
     }
 
+    /**
+     * 
+     * @return ExtendedPdoInterface
+     */
+    protected function getPdoSlave()
+    {
+        if (empty($this->oPdoForcedUse)) {
+            return $this->oPdoForcedUse;
+        }
+        return $this->oPdoSlave;
+    }
+
+    /**
+     * 
+     * @return ExtendedPdoInterface
+     */
+    protected function getPdoMaster()
+    {
+        if (empty($this->oPdoForcedUse)) {
+            return $this->oPdoForcedUse;
+        }
+        return $this->oPdoMaster;
+    }
+
+    /**
+     * @return $this
+     */
+    public function forcedUseSlave()
+    {
+        $this->forcedUsePdo($this->oPdoSlave);
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    public function forcedUseMaster()
+    {
+        $this->forcedUsePdo($this->oPdoMaster);
+        return $this;
+    }
+
+    /**
+     * @param ExtendedPdoInterface
+     * @return ExtendedPdoInterface
+     */
+    private function forcedUsePdo($oPdo)
+    {
+        $this->oPdoForcedUse = $oPdo;
+    }
+
+    /**
+     * 
+     */
+    private function unsetForcedUsePdo()
+    {
+        $this->oPdoForcedUse = null;
+    }
+
+    /**
+     * @param array $aParameters
+     */
     public function formatToDb(array &$aParameters)
     {
         foreach ($this->aJsonColumns as $sColumn) {
@@ -67,6 +145,9 @@ abstract class AbstractMapper
         }
     }
 
+    /**
+     * @param array $aParameters
+     */
     public function formatFromDb(array &$aParameters)
     {
         foreach ($this->aJsonColumns as $sColumn) {
@@ -98,16 +179,41 @@ abstract class AbstractMapper
         return $sQueryWhere;
     }
 
+    /**
+     * @param string $sEntityName
+     * @param array $aWhere
+     * @param string $sOrderBy
+     * @param int $iLimit
+     * @param int $iOffset
+     * @return array
+     */
     public function buildSelectQuery($sEntityName, array $aWhere, $sOrderBy = '', $iLimit = 0, $iOffset = 0)
     {
         return $this->buildSelect($sEntityName, $aWhere, self::WHERE_SEPARATOR_AND, $sOrderBy, $iLimit, $iOffset);
     }
 
+    /**
+     * @param string $sEntityName
+     * @param array $aWhere
+     * @param string $sOrderBy
+     * @param int $iLimit
+     * @param int $iOffset
+     * @return array
+     */
     public function buildSelectQueryOr($sEntityName, array $aWhere, $sOrderBy = '', $iLimit = 0, $iOffset = 0)
     {
         return $this->buildSelect($sEntityName, $aWhere, self::WHERE_SEPARATOR_OR, $sOrderBy, $iLimit, $iOffset);
     }
 
+    /**
+     * @param string $sEntityName
+     * @param array $aWhere
+     * @param string $sSeparator
+     * @param string $sOrderBy
+     * @param integer $iLimit
+     * @param integer $iOffset
+     * @return array
+     */
     private function buildSelect($sEntityName, array $aWhere, $sSeparator = self::WHERE_SEPARATOR_AND, $sOrderBy = '', $iLimit = 0, $iOffset = 0)
     {
         $sQueryWhere = $this->buildWherePlaceholders(array_keys($aWhere), $sSeparator);
@@ -126,6 +232,11 @@ abstract class AbstractMapper
         return [$sQuery, $aWhere];
     }
 
+    /**
+     * @param string $sEntityName
+     * @param array $aWhere
+     * @return array
+     */
     public function buildDeleteQuery($sEntityName, array $aWhere)
     {
         $sQueryWhere = $this->buildWherePlaceholders(array_keys($aWhere), ' AND ');
@@ -133,6 +244,11 @@ abstract class AbstractMapper
         return [$sQuery, $aWhere];
     }
 
+    /**
+     * @param string $sEntityName
+     * @param array $aParameters
+     * @return array
+     */
     public function buildInsertQuery($sEntityName, array $aParameters)
     {
         $sQueryColumnNames = '`' . implode('`, `', array_keys($aParameters)) . '`';
@@ -141,6 +257,12 @@ abstract class AbstractMapper
         return [$sQuery, $aParameters];
     }
 
+    /**
+     * @param string $sEntityName
+     * @param array $aWhere
+     * @param array $aToSet
+     * @return string
+     */
     public function buildUpdateQuery($sEntityName, array $aWhere, array $aToSet)
     {
         $sQuerySet   = $this->buildWherePlaceholders(array_keys($aToSet), ', ');
@@ -149,12 +271,22 @@ abstract class AbstractMapper
         return [$sQuery, $aToSet + $aWhere];
     }
 
+    /**
+     * @param string $sKey
+     * @param string $sValue
+     * @return $this
+     */
     public function set($sKey, $sValue)
     {
         $this->aMap[$sKey] = $sValue;
         return $this;
     }
 
+    /**
+     * @param string $sKey
+     * @return string
+     * @throws \BadMethodCallException
+     */
     public function get($sKey)
     {
         if (isset($this->aMap[$sKey])) {
@@ -164,16 +296,38 @@ abstract class AbstractMapper
         }
     }
 
+    /**
+     * @param array $aWhere
+     * @param string $sOrderBy
+     * @param int $iLimit
+     * @param int $iOffset
+     * @return array
+     */
     public function fetchAll(array $aWhere, $sOrderBy = '', $iLimit = 0, $iOffset = 0)
     {
         return $this->fetch($aWhere, self::WHERE_SEPARATOR_AND, $sOrderBy, $iLimit, $iOffset);
     }
 
+    /**
+     * @param array $aWhere
+     * @param string $sOrderBy
+     * @param int $iLimit
+     * @param int $iOffset
+     * @return array
+     */
     public function fetchAllOr(array $aWhere, $sOrderBy = '', $iLimit = 0, $iOffset = 0)
     {
         return $this->fetch($aWhere, self::WHERE_SEPARATOR_OR, $sOrderBy, $iLimit, $iOffset);
     }
 
+    /**
+     * @param array $aWhere
+     * @param string $sSeparator
+     * @param string $sOrderBy
+     * @param int $iLimit
+     * @param int $iOffset
+     * @return array
+     */
     private function fetch(array $aWhere, $sSeparator = self::WHERE_SEPARATOR_AND, $sOrderBy = '', $iLimit = 0, $iOffset = 0)
     {
         $this->formatToDb($aWhere);
@@ -185,22 +339,38 @@ abstract class AbstractMapper
         return $this->fetchAllQuery($sQuery, $aParameters);
     }
 
+    /**
+     * @param array $aWhere
+     * @param string $sOrderBy
+     * @return array
+     */
     public function fetchOne(array $aWhere, $sOrderBy = '')
     {
         $aAllRecords = $this->fetchAll($aWhere, $sOrderBy, 1);
         return isset($aAllRecords[0]) ? $aAllRecords[0] : [];
     }
 
+    /**
+     * @param array $aWhere
+     * @param string $sOrderBy
+     * @return array
+     */
     public function fetchOneOr(array $aWhere, $sOrderBy = '')
     {
         $aAllRecords = $this->fetchAllOr($aWhere, $sOrderBy, 1);
         return isset($aAllRecords[0]) ? $aAllRecords[0] : [];
     }
 
+    /**
+     * @param string $sQuery
+     * @param array $aParameters
+     * @return array
+     * @throws \RuntimeException
+     */
     public function fetchAllQuery($sQuery, array $aParameters = [])
     {
         try {
-            $aAllRecords = $this->oPdo->fetchAll($sQuery, $aParameters) ?: [];
+            $aAllRecords = $this->getPdoSlave()->fetchAll($sQuery, $aParameters) ?: [];
         } catch (\PDOException $oException) {
             $sErrMsg = $oException->getMessage()
                     . "\n  Entity: " . $this->get('entity')
@@ -214,21 +384,33 @@ abstract class AbstractMapper
             $this->formatFromDb($aAllRecords[$iIndex]);
         }
 
+        $this->unsetForcedUsePdo();
+
         return $aAllRecords;
     }
 
+    /**
+     * @param string $sQuery
+     * @param array $aParameters
+     * @return array
+     */
     public function fetchOneQuery($sQuery, array $aParameters = [])
     {
         $aAllRecords = $this->fetchAllQuery($sQuery, $aParameters);
         return isset($aAllRecords[0]) ? $aAllRecords[0] : [];
     }
 
+    /**
+     * @param array $aWhere
+     * @return \PDOStatement
+     * @throws \RuntimeException
+     */
     public function delete(array $aWhere)
     {
         $this->formatToDb($aWhere);
         list($sQuery, $aParameters) = $this->buildDeleteQuery($this->get('entity'), $aWhere);
         try {
-            $oPdoStmt = $this->oPdo->perform($sQuery, $aParameters) ?: [];
+            $oPdoStmt = $this->oPdoMaster->perform($sQuery, $aParameters) ?: [];
         } catch (\PDOException $oException) {
             $sErrMsg = $oException->getMessage()
                     . "\n  Entity: " . $this->get('entity')
@@ -239,13 +421,18 @@ abstract class AbstractMapper
         return $oPdoStmt;
     }
 
+    /**
+     * @param array $aParameters
+     * @return \PDOStatement
+     * @throws \RuntimeException
+     */
     public function insert(array $aParameters)
     {
         $this->formatToDb($aParameters);
         list($sQuery, $aParameters) = $this->buildInsertQuery($this->get('entity'), $aParameters);
 
         try {
-            $this->oPdo->perform($sQuery, $aParameters);
+            $this->oPdoMaster->perform($sQuery, $aParameters);
         } catch (\PDOException $oException) {
             $sErrMsg = $oException->getMessage() . "\n  Entity: "
                     . $this->get('entity')
@@ -254,9 +441,15 @@ abstract class AbstractMapper
             throw new \RuntimeException($sErrMsg);
         }
 
-        return $this->oPdo->lastInsertId();
+        return $this->oPdoMaster->lastInsertId();
     }
 
+    /**
+     * @param array $aWhere
+     * @param array $aToSet
+     * @return \PDOStatement
+     * @throws \RuntimeException
+     */
     public function update(array $aWhere, array $aToSet)
     {
         $this->formatToDb($aWhere);
@@ -264,7 +457,7 @@ abstract class AbstractMapper
         list($sQuery, $aParameters) = $this->buildUpdateQuery($this->get('entity'), $aWhere, $aToSet);
 
         try {
-            $oPdoStmt = $this->oPdo->perform($sQuery, $aParameters);
+            $oPdoStmt = $this->oPdoMaster->perform($sQuery, $aParameters);
         } catch (\PDOException $oException) {
             $sErrMsg = $oException->getMessage()
                     . "\n  Entity: " . $this->get('entity')
@@ -279,18 +472,18 @@ abstract class AbstractMapper
     /**
      * @return ExtendedPdoInterface
      */
-    protected function getPdo()
+    public function getPdo()
     {
-        $oPdo = $this->oPdo;
-        $oPdo->connect();
-        return $oPdo;
+        $this->oPdoSlave->connect();
+        $this->oPdoMaster->connect();
+        return $this->getPdoMaster();
     }
 
     public function disconnectPdo()
     {
         /** @var $oPdo ExtendedPdo */
-        $oPdo = $this->oPdo;
-        $oPdo->disconnect();
+        $this->oPdoSlave->disconnect();
+        $this->oPdoMaster->disconnect();
     }
 
 }
