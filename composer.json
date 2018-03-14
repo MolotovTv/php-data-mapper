@@ -1,30 +1,30 @@
 {
-  "name": "molotov/php-data-mapper",
-  "type": "library",
-  "description": "Mapper and Repository factories that implements the Data Mapper structure",
-  "keywords": [
-    "php",
-    "data",
-    "mapper"
-  ],
-  "homepage": "https://github.com/asticode/php-data-mapper",
-  "license": "MIT",
-  "authors": [
-    {
-      "name": "Quentin RENARD",
-      "email": "contact@asticode.com",
-      "homepage": "http://asticode.com",
-      "role": "Developer"
+    "name": "molotov/php-data-mapper",
+    "type": "library",
+    "description": "Mapper and Repository factories that implements the Data Mapper structure",
+    "keywords": [
+        "php",
+        "data",
+        "mapper"
+    ],
+    "homepage": "https://github.com/MolotovTv/php-data-mapper",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "MolotovTv",
+            "email": "contact@asticode.com",
+            "homepage": "http://asticode.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0",
+        "aura/sql": "~2.4.0",
+        "asticode/php-toolbox": "^1.1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Asticode\\DataMapper\\": "src/"
+        }
     }
-  ],
-  "require": {
-    "php": ">=5.3.0",
-    "aura/sql": "~2.4.0",
-    "asticode/php-toolbox": "^1.1.0"
-  },
-  "autoload": {
-    "psr-4": {
-      "Molotov\\DataMapper\\": "src/"
-    }
-  }
 }
