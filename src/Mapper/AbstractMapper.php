@@ -74,7 +74,7 @@ abstract class AbstractMapper
      */
     protected function getPdoSlave()
     {
-        if (empty($this->oPdoForcedUse)) {
+        if (!empty($this->oPdoForcedUse)) {
             return $this->oPdoForcedUse;
         }
         return $this->oPdoSlave;
@@ -86,7 +86,7 @@ abstract class AbstractMapper
      */
     protected function getPdoMaster()
     {
-        if (empty($this->oPdoForcedUse)) {
+        if (!empty($this->oPdoForcedUse)) {
             return $this->oPdoForcedUse;
         }
         return $this->oPdoMaster;
