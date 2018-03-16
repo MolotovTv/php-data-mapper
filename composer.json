@@ -22,9 +22,24 @@
         "aura/sql": "~2.4.0",
         "asticode/php-toolbox": "^1.1.0"
     },
+    "require-dev": {
+        "phpmd/phpmd": "~1.4",
+        "phpunit/phpunit": "^5.4",
+        "sebastian/phpcpd": "*",
+        "squizlabs/php_codesniffer": "~1.0"
+    },
     "autoload": {
         "psr-4": {
             "Asticode\\DataMapper\\": "src/"
         }
+    },
+    "scripts": {
+        "test": [
+            "cd tests; ../vendor/phpunit/phpunit/phpunit --configuration ../phpunit.xml --verbose"
+        ],
+        "test-coverage": [
+            "cd tests; ../vendor/phpunit/phpunit/phpunit --configuration ../phpunit.xml --coverage-html coverage" 
+        ],
+        "phpunit": "php vendor/bin/phpunit"
     }
 }

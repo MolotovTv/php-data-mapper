@@ -332,9 +332,9 @@ abstract class AbstractMapper
     {
         $this->formatToDb($aWhere);
         if ($sSeparator === self::WHERE_SEPARATOR_OR) {
-            list($sQuery, $aParameters) = $this->buildSelectQuery($this->get('entity'), $aWhere, $sOrderBy, $iLimit, $iOffset);
-        } else {
             list($sQuery, $aParameters) = $this->buildSelectQueryOr($this->get('entity'), $aWhere, $sOrderBy, $iLimit, $iOffset);
+        } else {
+            list($sQuery, $aParameters) = $this->buildSelectQuery($this->get('entity'), $aWhere, $sOrderBy, $iLimit, $iOffset);
         }
         return $this->fetchAllQuery($sQuery, $aParameters);
     }
