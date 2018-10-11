@@ -175,7 +175,7 @@ abstract class AbstractMapper
         $aColumnNames = array_keys($aWhere);
         foreach ($aWhere as $sColumnName => $value) {
             if (null === $value) {
-                $aQueryWhere[] = "`$sColumnName` IS :$sColumnName";
+                $aQueryWhere[] = "`$sColumnName` IS NULL";
             } else {
                 $aQueryWhere[] = "`$sColumnName`=:$sColumnName";
             }
