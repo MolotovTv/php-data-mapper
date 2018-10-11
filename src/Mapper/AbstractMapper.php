@@ -165,15 +165,20 @@ abstract class AbstractMapper
     /**
      * Returns a where expression (without WHERE keyword) with placeholders instead of values.
      *
-     * @param array $aColumnNames List of column's names.
+     * @param array $aWhere List of column's names.
      * @param string $sSeparator Separator between clauses, e.g. ' AND '.
      * @return string
      */
-    public function buildWherePlaceholders(array $aColumnNames, $sSeparator)
+    public function buildWherePlaceholders(array $aWhere, $sSeparator)
     {
-        $aQueryWhere = [];
-        foreach ($aColumnNames as $sColumnName) {
-            $aQueryWhere[] = "`$sColumnName`=:$sColumnName";
+        $aQueryWhere  = [];
+        $aColumnNames = array_keys($aWhere);
+        foreach ($aWhere as $sColumnName => $value) {
+            if (null === $value) {
+                $aQueryWhere[] = "`$sColumnName` IS :$sColumnName";
+            } else {
+                $aQueryWhere[] = "`$sColumnName`=:$sColumnName";
+            }
         }
         $sQueryWhere = implode($sSeparator, $aQueryWhere);
         return $sQueryWhere;
@@ -216,7 +221,7 @@ abstract class AbstractMapper
      */
     private function buildSelect($sEntityName, array $aWhere, $sSeparator = self::WHERE_SEPARATOR_AND, $sOrderBy = '', $iLimit = 0, $iOffset = 0)
     {
-        $sQueryWhere = $this->buildWherePlaceholders(array_keys($aWhere), $sSeparator);
+        $sQueryWhere = $this->buildWherePlaceholders($aWhere, $sSeparator);
         if ($iLimit > 0) {
             $sQueryLimit = ' LIMIT ' . $iOffset . ',' . $iLimit;
         } elseif ($iOffset > 0) {
@@ -239,7 +244,7 @@ abstract class AbstractMapper
      */
     public function buildDeleteQuery($sEntityName, array $aWhere)
     {
-        $sQueryWhere = $this->buildWherePlaceholders(array_keys($aWhere), ' AND ');
+        $sQueryWhere = $this->buildWherePlaceholders($aWhere, ' AND ');
         $sQuery      = "DELETE FROM `$sEntityName` WHERE $sQueryWhere";
         return [$sQuery, $aWhere];
     }
@@ -265,8 +270,8 @@ abstract class AbstractMapper
      */
     public function buildUpdateQuery($sEntityName, array $aWhere, array $aToSet)
     {
-        $sQuerySet   = $this->buildWherePlaceholders(array_keys($aToSet), ', ');
-        $sQueryWhere = $this->buildWherePlaceholders(array_keys($aWhere), ' AND ');
+        $sQuerySet   = $this->buildWherePlaceholders($aToSet, ', ');
+        $sQueryWhere = $this->buildWherePlaceholders($aWhere, ' AND ');
         $sQuery      = "UPDATE `$sEntityName` SET $sQuerySet WHERE $sQueryWhere";
         return [$sQuery, $aToSet + $aWhere];
     }
